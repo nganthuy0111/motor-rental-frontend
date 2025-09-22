@@ -1,32 +1,50 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from '../api/axios';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import './LoginPage.css';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  // const [error, setError] = useState('');
+  // const [success, setSuccess] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
     setLoading(true);
     try {
       await axios.post('/users/login', {
         email,
         password,
       });
-      setSuccess('Đăng nhập thành công!');
+      toast.success('Đăng nhập thành công!', {
+        position: 'top-center',
+        autoClose: 1200,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+        theme: 'colored',
+      });
       setTimeout(() => {
         navigate('/dashboard');
       }, 1200);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Đăng nhập thất bại!');
+      toast.error(err.response?.data?.message || 'Đăng nhập thất bại!', {
+        position: 'top-center',
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+        theme: 'colored',
+      });
     } finally {
       setLoading(false);
     }
@@ -72,8 +90,8 @@ const LoginPage: React.FC = () => {
               </label>
               <a href="#" className="text-red-500 text-sm hover:underline">Quên mật khẩu?</a>
             </div>
-            {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-3 text-center animate-fade-in">{error}</div>}
-            {success && <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded mb-3 text-center animate-fade-in">{success}</div>}
+            {/* Toastify sẽ hiển thị thông báo, không cần hiển thị lỗi/success ở đây */}
+            <ToastContainer />
             <button
               type="submit"
               className="w-full py-3 text-white font-semibold rounded-md gradient-button hover:opacity-90 transition text-lg"
