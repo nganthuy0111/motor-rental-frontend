@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { getCustomers } from "../../service/customerService";
+import { deleteCustomer, getCustomers } from "../../service/customerService";
 import type { Customer } from "../../types/customer";
 import { useDebounce } from "../../hooks/useDebounce";
-import { createCustomer } from "../../service/customerService";
+import { createCustomer, updateCustomer } from "../../service/customerService";
 import "./CustomerManagement.css";
 
 export default function CustomerManagement() {
@@ -11,6 +11,7 @@ export default function CustomerManagement() {
   const [limit] = useState<number>(10);
   const [pages, setPages] = useState<number>(1);
   const [search, setSearch] = useState<string>("");
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const debouncedSearch = useDebounce(search, 400);
 
@@ -38,13 +39,19 @@ async function handleSubmit(e: React.FormEvent) {
   if (form.driverLicenseImage) formData.append("driverLicenseImage", form.driverLicenseImage);
 
   try {
-    await createCustomer(formData);
+    if (editingId) {
+      await updateCustomer(editingId, formData);
+    } else {
+      await createCustomer(formData);
+    }
     setShowForm(false);
-    setPage(1); // load lại trang đầu
+    setEditingId(null);
+    setPage(1);
   } catch (err) {
     console.error(err);
   }
 }
+
 
   useEffect(() => {
     const controller = new AbortController();
@@ -100,7 +107,7 @@ async function handleSubmit(e: React.FormEvent) {
 {showForm && (
   <div className="modal">
     <form onSubmit={handleSubmit} className="form">
-      <h3>Thêm khách hàng mới</h3>
+<h3>{editingId ? "Cập nhật khách hàng" : "Thêm khách hàng mới"}</h3>
 
       <div className="form-group">
         <label>Họ tên</label>
@@ -234,9 +241,40 @@ async function handleSubmit(e: React.FormEvent) {
                   <span className="status success">Hoạt động</span>
                 </td>
                 <td>
-                  <button className="btn-edit">✏️</button>
-                  <button className="btn-delete">🗑️</button>
-                </td>
+                  <button
+  className="btn-edit"
+  onClick={() => {
+    setForm({
+      name: c.name || "",
+      phone: c.phone || "",
+      cccd: c.cccd || "",
+      driverLicense: c.driverLicense || "",
+      notes: c.notes || "",
+      cccdImage: null,
+      driverLicenseImage: null,
+    });
+    setEditingId(c._id);
+    setShowForm(true);
+  }}
+>
+  ✏️
+</button>
+
+  <button
+    className="btn-delete"
+    onClick={async () => {
+      if (confirm("Bạn có chắc muốn xóa khách hàng này?")) {
+        try {
+          await deleteCustomer(c._id);
+          setPage(1); // reload về trang đầu sau khi xóa
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    }}
+  >
+    🗑️
+  </button>                </td>
               </tr>
             ))}
           </tbody>
@@ -250,7 +288,7 @@ async function handleSubmit(e: React.FormEvent) {
           onClick={() => setPage((p) => Math.max(1, p - 1))}
           disabled={page <= 1}
         >
-          Prev
+          Trước
         </button>
         <span>
           Trang {page} / {pages}
@@ -260,7 +298,7 @@ async function handleSubmit(e: React.FormEvent) {
           onClick={() => setPage((p) => Math.min(p + 1, pages))}
           disabled={page >= pages}
         >
-          Next
+          Sau
         </button>
       </div>
     </div>

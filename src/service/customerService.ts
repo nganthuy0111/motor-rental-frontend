@@ -18,3 +18,11 @@ export async function createCustomer(data: FormData, signal?: AbortSignal) {
     signal,
   });
 }
+export async function updateCustomer(id: string, data: FormData) {
+  return api.put(`/customers/${id}`, data, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+}
+export async function deleteCustomer(id: string) {
+  return api.delete(`customers/${id}`);
+}
