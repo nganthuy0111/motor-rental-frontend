@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Booking } from "../../types/booking";
 import { getBookings, createBooking } from "../../service/bookingService";
+import type { CreateBookingPayload } from "../../service/bookingService";
 import { getCustomers } from "../../service/customerService";
 import { getVehicles } from "../../service/vehicleService";
 import type { Customer } from "../../types/customer";
@@ -12,7 +13,7 @@ const BookingManagement = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<CreateBookingPayload>({
     customer: "",
     vehicle: "",
     startDate: "",
@@ -40,7 +41,10 @@ const BookingManagement = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === "totalPrice" ? Number(value) || 0 : value,
+    } as CreateBookingPayload));
   };
 
   // Fetch customers with debounce when dropdown open or search changes
