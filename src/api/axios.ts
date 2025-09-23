@@ -2,8 +2,8 @@
 import axios from "axios";
 
 const api = axios.create({
-  // baseURL:  "https://motor-rental-backend.onrender.com/api", 
-  baseURL: "http://localhost:5000/api",
+  baseURL:  "https://motor-rental-backend.onrender.com/api", 
+  // baseURL: "http://localhost:5000/api",
   timeout: 10000, // 10s timeout
   headers: {
     "Content-Type": "application/json",
