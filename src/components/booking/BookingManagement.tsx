@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import type { Booking } from "../../types/booking";
-import { getBookings, createBooking, updateBooking, deleteBooking, type CreateBookingPayload, type UpdateBookingPayload } from "../../service/bookingService";
+import {
+  getBookings,
+  createBooking,
+  updateBooking,
+  deleteBooking,
+  type CreateBookingPayload,
+  type UpdateBookingPayload,
+} from "../../service/bookingService";
 import { getCustomers } from "../../service/customerService";
 import { getVehicles } from "../../service/vehicleService";
 import type { Customer } from "../../types/customer";
@@ -29,7 +36,7 @@ const BookingManagement = () => {
   type FormState = CreateBookingPayload & {
     status?: Booking["status"]; // chỉ dùng khi edit
   };
-  
+
   const [formData, setFormData] = useState<FormState>({
     customer: "",
     vehicle: "",
@@ -37,7 +44,7 @@ const BookingManagement = () => {
     endDate: "",
     totalPrice: 0,
   });
-  
+
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // Searchable dropdown states
@@ -73,10 +80,13 @@ const BookingManagement = () => {
     const t = setTimeout(async () => {
       try {
         setLoadingCustomers(true);
-        const res = await getCustomers({ page: 1, limit: 10, search: customerSearch }, controller.signal);
-        
+        const res = await getCustomers(
+          { page: 1, limit: 10, search: customerSearch },
+          controller.signal
+        );
+
         const list = (res as any)?.data ?? res;
-        setCustomers(Array.isArray(list) ? list : (list?.data ?? []));
+        setCustomers(Array.isArray(list) ? list : list?.data ?? []);
       } catch (e) {
         // ignore
       } finally {
@@ -96,9 +106,12 @@ const BookingManagement = () => {
     const t = setTimeout(async () => {
       try {
         setLoadingVehicles(true);
-        const res = await getVehicles({ page: 1, limit: 10, search: vehicleSearch }, controller.signal);
+        const res = await getVehicles(
+          { page: 1, limit: 10, search: vehicleSearch },
+          controller.signal
+        );
         const list = (res as any)?.data ?? res;
-        setVehicles(Array.isArray(list) ? list : (list?.data ?? []));
+        setVehicles(Array.isArray(list) ? list : list?.data ?? []);
       } catch (e) {
         // ignore
       } finally {
@@ -137,7 +150,7 @@ const BookingManagement = () => {
         const refreshed = await getBookings();
         setBookings(refreshed);
       }
-  
+
       // Reset form
       setShowForm(false);
       setEditingId(null);
@@ -157,13 +170,14 @@ const BookingManagement = () => {
     }
   };
 
-  if (loading) return <p className="loading">Đang tải dữ liệu...</p>;
+  if (loading) return <p className="loading">Đang tải dữ liệu..</p>;
 
   // Lọc theo từ khóa giống trang Vehicle (tìm theo KH, SĐT, biển số, hãng xe)
   const filtered = bookings.filter((b) => {
     const customerName = (b as any).customer?.name?.toLowerCase?.() || "";
     const customerPhone = (b as any).customer?.phone?.toLowerCase?.() || "";
-    const vehiclePlate = (b as any).vehicle?.licensePlate?.toLowerCase?.() || "";
+    const vehiclePlate =
+      (b as any).vehicle?.licensePlate?.toLowerCase?.() || "";
     const vehicleBrand = (b as any).vehicle?.brand?.toLowerCase?.() || "";
     const term = search.toLowerCase();
     return (
@@ -185,7 +199,10 @@ const BookingManagement = () => {
           onChange={(e) => setSearch(e.target.value)}
         />
         <div className="flex gap-3 ml-0 md:ml-4">
-          <button className="mgmt-btn primary ml-0 md:ml-0 mt-2 md:mt-0" onClick={() => setShowForm(true)}>
+          <button
+            className="mgmt-btn primary ml-0 md:ml-0 mt-2 md:mt-0"
+            onClick={() => setShowForm(true)}
+          >
             + Thêm đơn thuê
           </button>
         </div>
@@ -200,29 +217,30 @@ const BookingManagement = () => {
               <th>Thời gian</th>
               <th>Số tiền</th>
               <th>Trạng thái</th>
-              <th>Thao tác</th> 
-
+              <th>Thao tác</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((b) => (
               <tr key={b._id}>
                 <td>
-                  {(
-                    (b as any).customer &&
-                    typeof (b as any).customer === "object" &&
-                    ((b as any).customer.name || (b as any).customer.phone)
-                  )
-                    ? `${(b as any).customer.name ?? ""}${(b as any).customer.phone ? `(${(b as any).customer.phone})` : ""}`
+                  {(b as any).customer &&
+                  typeof (b as any).customer === "object" &&
+                  ((b as any).customer.name || (b as any).customer.phone)
+                    ? `${(b as any).customer.name ?? ""}${
+                        (b as any).customer.phone
+                          ? `(${(b as any).customer.phone})`
+                          : ""
+                      }`
                     : "—"}
                 </td>
                 <td>
-                  {(
-                    (b as any).vehicle &&
-                    typeof (b as any).vehicle === "object" &&
-                    (((b as any).vehicle.licensePlate) || ((b as any).vehicle.brand))
-                  )
-                    ? `${(b as any).vehicle.licensePlate ?? ""} - ${(b as any).vehicle.brand ?? ""}`
+                  {(b as any).vehicle &&
+                  typeof (b as any).vehicle === "object" &&
+                  ((b as any).vehicle.licensePlate || (b as any).vehicle.brand)
+                    ? `${(b as any).vehicle.licensePlate ?? ""} - ${
+                        (b as any).vehicle.brand ?? ""
+                      }`
                     : "—"}
                 </td>
                 <td>
@@ -284,15 +302,32 @@ const BookingManagement = () => {
                           status: b.status,
                         });
                         setCustomerLabel(
-                          b.customer ? `${b.customer.name}${b.customer.phone ? ` (${b.customer.phone})` : ""}` : ""
+                          b.customer
+                            ? `${b.customer.name}${
+                                b.customer.phone ? ` (${b.customer.phone})` : ""
+                              }`
+                            : ""
                         );
                         setVehicleLabel(
-                          b.vehicle ? `${b.vehicle.licensePlate} - ${b.vehicle.brand}` : ""
+                          b.vehicle
+                            ? `${b.vehicle.licensePlate} - ${b.vehicle.brand}`
+                            : ""
                         );
                       }}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.95 1.95m-2.475-1.425l-9.193 9.193a4.5 4.5 0 00-1.17 2.137l-.313 1.25a.75.75 0 00.91.91l1.25-.313a4.5 4.5 0 002.137-1.17l9.193-9.193m-2.814-2.814a1.5 1.5 0 112.122 2.122L12.38 14.13a3 3 0 01-1.424.802l-1.068.267.267-1.068a3 3 0 01.802-1.424l6.905-6.905z" />
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className="w-5 h-5"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M16.862 4.487l1.95 1.95m-2.475-1.425l-9.193 9.193a4.5 4.5 0 00-1.17 2.137l-.313 1.25a.75.75 0 00.91.91l1.25-.313a4.5 4.5 0 002.137-1.17l9.193-9.193m-2.814-2.814a1.5 1.5 0 112.122 2.122L12.38 14.13a3 3 0 01-1.424.802l-1.068.267.267-1.068a3 3 0 01.802-1.424l6.905-6.905z"
+                        />
                       </svg>
                     </button>
                     <button
@@ -300,7 +335,8 @@ const BookingManagement = () => {
                       className="mgmt-btn destructive icon"
                       title="Xóa"
                       onClick={async () => {
-                        if (!confirm("Bạn có chắc muốn xóa đơn thuê này?")) return;
+                        if (!confirm("Bạn có chắc muốn xóa đơn thuê này?"))
+                          return;
                         try {
                           await deleteBooking(b._id);
                           const refreshed = await getBookings();
@@ -347,14 +383,19 @@ const BookingManagement = () => {
                 <label htmlFor="customer" className="form-label">
                   Chọn khách hàng <span className="required">*</span>
                 </label>
-                <div className={`dropdown ${editingId ? "disabled" : ""}`} onClick={() => !editingId && setCustomerOpen(true)}>
+                <div
+                  className={`dropdown ${editingId ? "disabled" : ""}`}
+                  onClick={() => !editingId && setCustomerOpen(true)}
+                >
                   <input
                     id="customer"
                     type="text"
                     name="customerLabel"
                     placeholder="Tìm và chọn khách hàng"
-                    value={customerOpen ? customerSearch : (customerLabel || "")}
-                    onChange={(e) => !editingId && setCustomerSearch(e.target.value)}
+                    value={customerOpen ? customerSearch : customerLabel || ""}
+                    onChange={(e) =>
+                      !editingId && setCustomerSearch(e.target.value)
+                    }
                     className="form-input dropdown-toggle"
                     onFocus={() => !editingId && setCustomerOpen(true)}
                     autoComplete="off"
@@ -382,13 +423,20 @@ const BookingManagement = () => {
                               className="dropdown-item"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setFormData((prev) => ({ ...prev, customer: c._id }));
-                                setCustomerLabel(`${c.name}${c.phone ? ` (${c.phone})` : ""}`);
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  customer: c._id,
+                                }));
+                                setCustomerLabel(
+                                  `${c.name}${c.phone ? ` (${c.phone})` : ""}`
+                                );
                                 setCustomerOpen(false);
                               }}
                             >
                               <div className="item-title">{c.name}</div>
-                              {c.phone && <div className="item-sub">{c.phone}</div>}
+                              {c.phone && (
+                                <div className="item-sub">{c.phone}</div>
+                              )}
                             </div>
                           ))
                         )}
@@ -407,21 +455,30 @@ const BookingManagement = () => {
                   )}
                 </div>
                 {/* Hidden field holds the selected customer ID for submit */}
-                <input type="hidden" name="customer" value={formData.customer} />
+                <input
+                  type="hidden"
+                  name="customer"
+                  value={formData.customer}
+                />
               </div>
 
               <div className="form-group dropdown-group">
                 <label htmlFor="vehicle" className="form-label">
                   Chọn xe <span className="required">*</span>
                 </label>
-                <div className={`dropdown ${editingId ? "disabled" : ""}`} onClick={() => !editingId && setVehicleOpen(true)}>
+                <div
+                  className={`dropdown ${editingId ? "disabled" : ""}`}
+                  onClick={() => !editingId && setVehicleOpen(true)}
+                >
                   <input
                     id="vehicle"
                     type="text"
                     name="vehicleLabel"
                     placeholder="Tìm và chọn xe"
-                    value={vehicleOpen ? vehicleSearch : (vehicleLabel || "")}
-                    onChange={(e) => !editingId && setVehicleSearch(e.target.value)}
+                    value={vehicleOpen ? vehicleSearch : vehicleLabel || ""}
+                    onChange={(e) =>
+                      !editingId && setVehicleSearch(e.target.value)
+                    }
                     className="form-input dropdown-toggle"
                     onFocus={() => !editingId && setVehicleOpen(true)}
                     autoComplete="off"
@@ -449,13 +506,23 @@ const BookingManagement = () => {
                               className="dropdown-item"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setFormData((prev) => ({ ...prev, vehicle: v._id }));
-                                setVehicleLabel(`${v.licensePlate} - ${v.brand}`);
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  vehicle: v._id,
+                                }));
+                                setVehicleLabel(
+                                  `${v.licensePlate} - ${v.brand}`
+                                );
                                 setVehicleOpen(false);
                               }}
                             >
-                              <div className="item-title">{v.licensePlate} - {v.brand}</div>
-                              <div className="item-sub">{v.type} • {v.color} • {v.pricePerDay.toLocaleString("vi-VN")}đ/ngày</div>
+                              <div className="item-title">
+                                {v.licensePlate} - {v.brand}
+                              </div>
+                              <div className="item-sub">
+                                {v.type} • {v.color} •{" "}
+                                {v.pricePerDay.toLocaleString("vi-VN")}đ/ngày
+                              </div>
                             </div>
                           ))
                         )}
@@ -535,7 +602,10 @@ const BookingManagement = () => {
                     className="form-input form-select"
                     value={formData.status ?? "pending"}
                     onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, status: e.target.value as Booking["status"] }))
+                      setFormData((prev) => ({
+                        ...prev,
+                        status: e.target.value as Booking["status"],
+                      }))
                     }
                     required
                   >
@@ -569,21 +639,62 @@ const BookingManagement = () => {
             <h2>Chi tiết đơn thuê</h2>
             <button
               className="absolute top-4 right-6 text-gray-400 hover:text-red-400 text-2xl"
-              onClick={() => { setShowDetail(false); setDetailBooking(null); }}
+              onClick={() => {
+                setShowDetail(false);
+                setDetailBooking(null);
+              }}
             >
               &times;
             </button>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
               <div>
-                <div className="mb-2"><span className="font-semibold">Khách hàng:</span> {((detailBooking as any).customer && typeof (detailBooking as any).customer === 'object') ? `${(detailBooking as any).customer.name}${(detailBooking as any).customer.phone ? ` (${(detailBooking as any).customer.phone})` : ''}` : '—'}</div>
-                <div className="mb-2"><span className="font-semibold">Xe:</span> {((detailBooking as any).vehicle && typeof (detailBooking as any).vehicle === 'object') ? `${(detailBooking as any).vehicle.licensePlate} - ${(detailBooking as any).vehicle.brand}` : '—'}</div>
-                <div className="mb-2"><span className="font-semibold">Thời gian:</span> {new Date(detailBooking.startDate).toLocaleDateString()} → {new Date(detailBooking.endDate).toLocaleDateString()}</div>
-                <div className="mb-2"><span className="font-semibold">Tổng tiền:</span> {detailBooking.totalPrice.toLocaleString('vi-VN')} VND</div>
-                <div className="mb-2"><span className="font-semibold">Trạng thái:</span> <span className={`mgmt-badge ${detailBooking.status}`}>{detailBooking.status}</span></div>
+                <div className="mb-2">
+                  <span className="font-semibold">Khách hàng:</span>{" "}
+                  {(detailBooking as any).customer &&
+                  typeof (detailBooking as any).customer === "object"
+                    ? `${(detailBooking as any).customer.name}${
+                        (detailBooking as any).customer.phone
+                          ? ` (${(detailBooking as any).customer.phone})`
+                          : ""
+                      }`
+                    : "—"}
+                </div>
+                <div className="mb-2">
+                  <span className="font-semibold">Xe:</span>{" "}
+                  {(detailBooking as any).vehicle &&
+                  typeof (detailBooking as any).vehicle === "object"
+                    ? `${(detailBooking as any).vehicle.licensePlate} - ${
+                        (detailBooking as any).vehicle.brand
+                      }`
+                    : "—"}
+                </div>
+                <div className="mb-2">
+                  <span className="font-semibold">Thời gian:</span>{" "}
+                  {new Date(detailBooking.startDate).toLocaleDateString()} →{" "}
+                  {new Date(detailBooking.endDate).toLocaleDateString()}
+                </div>
+                <div className="mb-2">
+                  <span className="font-semibold">Tổng tiền:</span>{" "}
+                  {detailBooking.totalPrice.toLocaleString("vi-VN")} VND
+                </div>
+                <div className="mb-2">
+                  <span className="font-semibold">Trạng thái:</span>{" "}
+                  <span className={`mgmt-badge ${detailBooking.status}`}>
+                    {detailBooking.status}
+                  </span>
+                </div>
               </div>
             </div>
             <div className="form-actions mt-6">
-              <button className="mgmt-btn secondary" onClick={() => { setShowDetail(false); setDetailBooking(null); }}>Đóng</button>
+              <button
+                className="mgmt-btn secondary"
+                onClick={() => {
+                  setShowDetail(false);
+                  setDetailBooking(null);
+                }}
+              >
+                Đóng
+              </button>
             </div>
           </div>
         </div>
