@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Booking } from "../../types/booking";
-import { getBookings, createBooking } from "../../service/bookingService";
-import type { CreateBookingPayload } from "../../service/bookingService";
+import { getBookings, createBooking, updateBooking, deleteBooking, type CreateBookingPayload, type UpdateBookingPayload } from "../../service/bookingService";
 import { getCustomers } from "../../service/customerService";
 import { getVehicles } from "../../service/vehicleService";
 import type { Customer } from "../../types/customer";
@@ -13,13 +12,19 @@ const BookingManagement = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
 
-  const [formData, setFormData] = useState<CreateBookingPayload>({
+  type FormState = CreateBookingPayload & {
+    status?: Booking["status"]; // chỉ dùng khi edit
+  };
+  
+  const [formData, setFormData] = useState<FormState>({
     customer: "",
     vehicle: "",
     startDate: "",
     endDate: "",
     totalPrice: 0,
   });
+  
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Searchable dropdown states
   const [customerOpen, setCustomerOpen] = useState(false);
@@ -44,7 +49,7 @@ const BookingManagement = () => {
     setFormData((prev) => ({
       ...prev,
       [name]: name === "totalPrice" ? Number(value) || 0 : value,
-    } as CreateBookingPayload));
+    }));
   };
 
   // Fetch customers with debounce when dropdown open or search changes
@@ -55,8 +60,7 @@ const BookingManagement = () => {
       try {
         setLoadingCustomers(true);
         const res = await getCustomers({ page: 1, limit: 10, search: customerSearch }, controller.signal);
-        // Some APIs may return { data: [] }, ensure we set an array
-        // Fallbacks: res.data?.data (paginated) -> res.data (array) -> []
+        
         const list = (res as any)?.data ?? res;
         setCustomers(Array.isArray(list) ? list : (list?.data ?? []));
       } catch (e) {
@@ -96,9 +100,37 @@ const BookingManagement = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const newBooking = await createBooking(formData);
-      setBookings((prev) => [...prev, newBooking]);
+      if (editingId) {
+        const payload: UpdateBookingPayload = {
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          totalPrice: Number(formData.totalPrice) || 0,
+          status: formData.status ?? "pending",
+        };
+        await updateBooking(editingId, payload);
+        // Re-fetch to ensure customer/vehicle are populated and the UI updates immediately
+        const refreshed = await getBookings();
+        setBookings(refreshed);
+      } else {
+        await createBooking({
+          customer: formData.customer,
+          vehicle: formData.vehicle,
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          totalPrice: Number(formData.totalPrice) || 0,
+        });
+        // Re-fetch to get populated customer/vehicle for the new booking as well
+        const refreshed = await getBookings();
+        setBookings(refreshed);
+      }
+  
+      // Reset form
       setShowForm(false);
+      setEditingId(null);
+      setCustomerLabel("");
+      setVehicleLabel("");
+      setCustomerSearch("");
+      setVehicleSearch("");
       setFormData({
         customer: "",
         vehicle: "",
@@ -107,7 +139,7 @@ const BookingManagement = () => {
         totalPrice: 0,
       });
     } catch (error) {
-      console.error("Tạo booking thất bại:", error);
+      console.error("Lưu booking thất bại:", error);
     }
   };
 
@@ -130,19 +162,29 @@ const BookingManagement = () => {
               <th>Thời gian</th>
               <th>Số tiền</th>
               <th>Trạng thái</th>
+              <th>Thao tác</th> 
+
             </tr>
           </thead>
           <tbody>
             {bookings.map((b) => (
               <tr key={b._id}>
                 <td>
-                  {b.customer
-                    ? `${b.customer.name} (${b.customer.phone})`
+                  {(
+                    (b as any).customer &&
+                    typeof (b as any).customer === "object" &&
+                    ((b as any).customer.name || (b as any).customer.phone)
+                  )
+                    ? `${(b as any).customer.name ?? ""}${(b as any).customer.phone ? ` (${(b as any).customer.phone})` : ""}`
                     : "—"}
                 </td>
                 <td>
-                  {b.vehicle
-                    ? `${b.vehicle.licensePlate} - ${b.vehicle.brand}`
+                  {(
+                    (b as any).vehicle &&
+                    typeof (b as any).vehicle === "object" &&
+                    (((b as any).vehicle.licensePlate) || ((b as any).vehicle.brand))
+                  )
+                    ? `${(b as any).vehicle.licensePlate ?? ""} - ${(b as any).vehicle.brand ?? ""}`
                     : "—"}
                 </td>
                 <td>
@@ -154,6 +196,52 @@ const BookingManagement = () => {
                 </td>
                 <td>
                   <span className={`status-badge ${b.status}`}>{b.status}</span>
+                </td>
+                <td>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      type="button"
+                      className="edit-btn"
+                      onClick={() => {
+                        setEditingId(b._id);
+                        setShowForm(true);
+                        setCustomerOpen(false);
+                        setVehicleOpen(false);
+                        setFormData({
+                          customer: b.customer?._id || "",
+                          vehicle: b.vehicle?._id || "",
+                          startDate: b.startDate?.slice(0, 10) || "",
+                          endDate: b.endDate?.slice(0, 10) || "",
+                          totalPrice: b.totalPrice || 0,
+                          status: b.status,
+                        });
+                        setCustomerLabel(
+                          b.customer ? `${b.customer.name}${b.customer.phone ? ` (${b.customer.phone})` : ""}` : ""
+                        );
+                        setVehicleLabel(
+                          b.vehicle ? `${b.vehicle.licensePlate} - ${b.vehicle.brand}` : ""
+                        );
+                      }}
+                    >
+                      Sửa
+                    </button>
+                    <button
+                      type="button"
+                      className="delete-btn"
+                      onClick={async () => {
+                        if (!confirm("Bạn có chắc muốn xóa đơn thuê này?")) return;
+                        try {
+                          await deleteBooking(b._id);
+                          const refreshed = await getBookings();
+                          setBookings(refreshed);
+                        } catch (err) {
+                          console.error("Xóa booking thất bại:", err);
+                        }
+                      }}
+                    >
+                      Xóa
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -170,17 +258,18 @@ const BookingManagement = () => {
                 <label htmlFor="customer" className="form-label">
                   Chọn khách hàng <span className="required">*</span>
                 </label>
-                <div className="dropdown" onClick={() => setCustomerOpen(true)}>
+                <div className={`dropdown ${editingId ? "disabled" : ""}`} onClick={() => !editingId && setCustomerOpen(true)}>
                   <input
                     id="customer"
                     type="text"
                     name="customerLabel"
                     placeholder="Tìm và chọn khách hàng"
                     value={customerOpen ? customerSearch : (customerLabel || "")}
-                    onChange={(e) => setCustomerSearch(e.target.value)}
+                    onChange={(e) => !editingId && setCustomerSearch(e.target.value)}
                     className="form-input dropdown-toggle"
-                    onFocus={() => setCustomerOpen(true)}
+                    onFocus={() => !editingId && setCustomerOpen(true)}
                     autoComplete="off"
+                    disabled={!!editingId}
                   />
                   {customerOpen && (
                     <div className="dropdown-menu">
@@ -236,17 +325,18 @@ const BookingManagement = () => {
                 <label htmlFor="vehicle" className="form-label">
                   Chọn xe <span className="required">*</span>
                 </label>
-                <div className="dropdown" onClick={() => setVehicleOpen(true)}>
+                <div className={`dropdown ${editingId ? "disabled" : ""}`} onClick={() => !editingId && setVehicleOpen(true)}>
                   <input
                     id="vehicle"
                     type="text"
                     name="vehicleLabel"
                     placeholder="Tìm và chọn xe"
                     value={vehicleOpen ? vehicleSearch : (vehicleLabel || "")}
-                    onChange={(e) => setVehicleSearch(e.target.value)}
+                    onChange={(e) => !editingId && setVehicleSearch(e.target.value)}
                     className="form-input dropdown-toggle"
-                    onFocus={() => setVehicleOpen(true)}
+                    onFocus={() => !editingId && setVehicleOpen(true)}
                     autoComplete="off"
+                    disabled={!!editingId}
                   />
                   {vehicleOpen && (
                     <div className="dropdown-menu">
@@ -344,6 +434,29 @@ const BookingManagement = () => {
                   required
                 />
               </div>
+
+              {editingId && (
+                <div className="form-group">
+                  <label htmlFor="status" className="form-label">
+                    Trạng thái <span className="required">*</span>
+                  </label>
+                  <select
+                    id="status"
+                    name="status"
+                    className="form-input form-select"
+                    value={formData.status ?? "pending"}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, status: e.target.value as Booking["status"] }))
+                    }
+                    required
+                  >
+                    <option value="pending">pending</option>
+                    <option value="active">active</option>
+                    <option value="completed">completed</option>
+                    <option value="overdue">overdue</option>
+                  </select>
+                </div>
+              )}
 
               <div className="form-actions">
                 <button type="submit" className="save-btn">
