@@ -2,18 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import axios from '../../api/axios';
 import { toast } from 'react-toastify';
+import type { Vehicle } from '../../types/vehicle';
 
-interface Vehicle {
-  _id: string;
-  licensePlate: string;
-  brand: string;
-    type: string;
-  status: 'available' | 'rented' | 'maintenance';
-  pricePerDay: number;
-  year: number;
-  color: string;
-  images: string[];
-}
 
 const statusMap: Record<string, { label: string; color: string }> = {
   available: { label: 'Sẵn sàng', color: 'bg-green-600' },

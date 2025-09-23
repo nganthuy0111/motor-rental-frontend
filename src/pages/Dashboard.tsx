@@ -4,6 +4,7 @@ import Sidebar from '../components/dashboard/sidebar-dashboard/Sidebar';
 import ContentDashboard from '../components/dashboard/content-dashboard/ContentDashboard';
 import VehicleManagement from '../components/vehicle/VehicleManagement';
 import CustomerManagement from '../components/customers/CustomerManagement';
+import BookingManagement from '../components/booking/BookingManagement';
 
 // const tabList = [
 //   'Dashboard',
@@ -32,7 +33,7 @@ const Dashboard: React.FC = () => {
       content = <CustomerManagement/>;
       break;
     case 'Đơn thuê':
-      content = <div>Đơn thuê (đang phát triển)</div>;
+      content = <BookingManagement/>;
       break;
     case 'Lịch trình':
       content = <div>Lịch trình (đang phát triển)</div>;
