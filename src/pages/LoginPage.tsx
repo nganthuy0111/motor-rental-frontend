@@ -54,10 +54,10 @@ const LoginPage: React.FC = () => {
     <div className="min-h-screen bg-white flex items-center justify-center">
       <div className="flex flex-col items-center justify-center w-full">
         <div className="mb-8 flex flex-col items-center">
-          <div className="w-14 h-14 bg-gradient-to-br from-red-500 to-gray-800 rounded flex items-center justify-center mb-2">
-            <span className="text-white text-lg">🚴</span>
+          <div className="w-30 h-30  rounded flex items-center justify-center mb-2">
+            <img src="./src/assets/logoMT.jpg"alt="logo" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-800 mt-2">MOTO RENTAL</h1>
+          <h1 className="text-3xl font-bold text-gray-800 mt-2">Thuê xe máy Đà Lạt - Minh Trung</h1>
           <p className="text-gray-500 mt-2 text-base">Chào mừng trở lại! Vui lòng đăng nhập vào tài khoản của bạn</p>
         </div>
         <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md flex flex-col items-center">
