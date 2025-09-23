@@ -3,7 +3,7 @@ import HeaderDashboard from '../components/dashboard/header-dashboard/HeaderDash
 import Sidebar from '../components/dashboard/sidebar-dashboard/Sidebar';
 import ContentDashboard from '../components/dashboard/content-dashboard/ContentDashboard';
 import VehicleManagement from '../components/vehicle/VehicleManagement';
-import CustomerManagement from '../components/customers/customerManagement';
+import CustomerManagement from '../components/customers/CustomerManagement';
 
 // const tabList = [
 //   'Dashboard',

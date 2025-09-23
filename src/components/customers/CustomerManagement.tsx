@@ -8,7 +8,7 @@ import "./CustomerManagement.css";
 export default function CustomerManagement() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [page, setPage] = useState<number>(1);
-  const [limit, setLimit] = useState<number>(10);
+  const [limit] = useState<number>(10);
   const [pages, setPages] = useState<number>(1);
   const [search, setSearch] = useState<string>("");
 
