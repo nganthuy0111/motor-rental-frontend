@@ -55,7 +55,7 @@ const LoginPage: React.FC = () => {
       <div className="flex flex-col items-center justify-center w-full">
         <div className="mb-8 flex flex-col items-center">
           <div className="w-30 h-30  rounded flex items-center justify-center mb-2">
-            <img src="./src/assets/logoMT.jpg"alt="logo" />
+            <img src="https://scontent.fsgn2-9.fna.fbcdn.net/v/t39.30808-1/487918174_122130592664670845_4381871860685337387_n.jpg?stp=cp6_dst-jpg_s200x200_tt6&_nc_cat=106&ccb=1-7&_nc_sid=2d3e12&_nc_ohc=vOq9oIfw5A4Q7kNvwHtc4lK&_nc_oc=AdkT-0_nBqyssilMiBhIvEPgc4jrmAvpuXnG3iQ8fG3B0k1ZCUd68WTdt8t-VY9svrY&_nc_zt=24&_nc_ht=scontent.fsgn2-9.fna&_nc_gid=2ghnHdI8FFeTx9IkkiHwyg&oh=00_AfbVNXxlsnqMYdF8D6acIWDdPD0oYiopksVANwuLu4ge6g&oe=68D7E350"alt="logo" />
           </div>
           <h1 className="text-3xl font-bold text-gray-800 mt-2">Thuê xe máy Đà Lạt - Minh Trung</h1>
           <p className="text-gray-500 mt-2 text-base">Chào mừng trở lại! Vui lòng đăng nhập vào tài khoản của bạn</p>
