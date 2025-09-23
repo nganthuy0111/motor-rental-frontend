@@ -4,6 +4,7 @@ import type { Customer } from "../../types/customer";
 import { useDebounce } from "../../hooks/useDebounce";
 import { createCustomer, updateCustomer } from "../../service/customerService";
 import "./CustomerManagement.css";
+import "../../styles/management.css";
 
 export default function CustomerManagement() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -12,6 +13,8 @@ export default function CustomerManagement() {
   const [pages, setPages] = useState<number>(1);
   const [search, setSearch] = useState<string>("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
+  const [detailCustomer, setDetailCustomer] = useState<Customer | null>(null);
 
   const debouncedSearch = useDebounce(search, 400);
 
@@ -71,8 +74,8 @@ async function handleSubmit(e: React.FormEvent) {
   }
 
   return (
-    <div className="customer-page">
-      <h2 className="title">Quản lý khách hàng</h2>
+    <div className="mgmt-page">
+      <h2 className="mgmt-title">Quản lý khách hàng</h2>
 
       {/* Cards thống kê */}
       <div className="stats">
@@ -91,9 +94,9 @@ async function handleSubmit(e: React.FormEvent) {
       </div>
 
       {/* Thanh tìm kiếm */}
-      <div className="toolbar">
+      <div className="bg-gray-100 rounded-lg p-4 mb-6 border border-gray-200 flex flex-col md:flex-row md:items-center md:justify-between">
         <input
-          className="search-input"
+          className="bg-white text-gray-900 border border-gray-300 rounded px-4 py-2 w-full md:w-1/2 mb-2 md:mb-0"
           placeholder="Tìm kiếm theo tên, sđt, CCCD..."
           value={search}
           onChange={(e) => {
@@ -101,12 +104,14 @@ async function handleSubmit(e: React.FormEvent) {
             setPage(1);
           }}
         />
-<button className="btn-add" onClick={() => setShowForm(true)}>
-  + Thêm khách hàng
-</button>
-{showForm && (
-  <div className="modal">
-    <form onSubmit={handleSubmit} className="form">
+        <div className="flex gap-3 ml-0 md:ml-4">
+          <button className="mgmt-btn primary ml-0 md:ml-0 mt-2 md:mt-0" onClick={() => setShowForm(true)}>
+            + Thêm khách hàng
+          </button>
+        </div>
+        {showForm && (
+          <div className="modal">
+            <form onSubmit={handleSubmit} className="form">
 <h3>{editingId ? "Cập nhật khách hàng" : "Thêm khách hàng mới"}</h3>
 
       <div className="form-group">
@@ -192,19 +197,17 @@ async function handleSubmit(e: React.FormEvent) {
       </div>
 
       <div className="actions">
-        <button type="button" onClick={() => setShowForm(false)}>Hủy</button>
-        <button type="submit">Lưu</button>
+        <button type="button" className="mgmt-btn secondary" onClick={() => setShowForm(false)}>Hủy</button>
+        <button type="submit" className="mgmt-btn primary">Lưu</button>
       </div>
-    </form>
-  </div>
-)}
-
-
+            </form>
+          </div>
+        )}
       </div>
 
       {/* Bảng */}
-      <div className="table-container">
-        <table className="customer-table">
+      <div className="mgmt-table-wrapper">
+        <table className="mgmt-table">
           <thead>
             <tr>
               <th>Họ tên</th>
@@ -238,11 +241,41 @@ async function handleSubmit(e: React.FormEvent) {
                   />
                 </td>
                 <td>
-                  <span className="status success">Hoạt động</span>
+                  <span className="mgmt-badge active">Hoạt động</span>
                 </td>
                 <td>
-                  <button
-  className="btn-edit"
+                  <div className="mgmt-actions">
+                    <button
+                      className="mgmt-btn secondary icon"
+                      title="Xem chi tiết"
+                      onClick={() => {
+                        setDetailCustomer(c);
+                        setShowDetail(true);
+                      }}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2}
+                        stroke="currentColor"
+                        className="w-5 h-5"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                      </svg>
+                    </button>
+                    <button
+  className="mgmt-btn secondary icon"
+  title="Sửa"
   onClick={() => {
     setForm({
       name: c.name || "",
@@ -257,11 +290,12 @@ async function handleSubmit(e: React.FormEvent) {
     setShowForm(true);
   }}
 >
-  ✏️
+  <span role="img" aria-label="edit">✏️</span>
 </button>
 
   <button
-    className="btn-delete"
+    className="mgmt-btn destructive icon"
+    title="Xóa"
     onClick={async () => {
       if (confirm("Bạn có chắc muốn xóa khách hàng này?")) {
         try {
@@ -273,13 +307,73 @@ async function handleSubmit(e: React.FormEvent) {
       }
     }}
   >
-    🗑️
-  </button>                </td>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={2}
+      stroke="currentColor"
+      className="w-5 h-5"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M6 7h12M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2m3 0v12a2 2 0 01-2 2H7a2 2 0 01-2-2V7h16z"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M10 11v6m4-6v6"
+      />
+    </svg>
+  </button>
+                  </div>                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {showDetail && detailCustomer && (
+        <div className="modal">
+          <div className="form w-full max-w-2xl">
+            <h3>Chi tiết khách hàng</h3>
+            <button
+              className="absolute top-4 right-6 text-gray-400 hover:text-red-400 text-2xl"
+              onClick={() => { setShowDetail(false); setDetailCustomer(null); }}
+            >
+              &times;
+            </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
+              <div>
+                <div className="mb-2"><span className="font-semibold">Họ tên:</span> {detailCustomer.name}</div>
+                <div className="mb-2"><span className="font-semibold">Số điện thoại:</span> {detailCustomer.phone}</div>
+                <div className="mb-2"><span className="font-semibold">CCCD:</span> {detailCustomer.cccd}</div>
+                <div className="mb-2"><span className="font-semibold">Bằng lái:</span> {detailCustomer.driverLicense}</div>
+                {detailCustomer.notes && (
+                  <div className="mb-2"><span className="font-semibold">Ghi chú:</span> {detailCustomer.notes}</div>
+                )}
+              </div>
+              <div>
+                <div className="font-semibold mb-2">Hình ảnh</div>
+                <div className="flex gap-3 items-start">
+                  <div className="text-sm">
+                    <div className="mb-1">CCCD</div>
+                    <img src={getImageUrl(detailCustomer.cccdImage)} alt="cccd" className="w-24 h-16 object-cover rounded border border-gray-200" />
+                  </div>
+                  <div className="text-sm">
+                    <div className="mb-1">BLX</div>
+                    <img src={getImageUrl(detailCustomer.driverLicenseImage)} alt="blx" className="w-24 h-16 object-cover rounded border border-gray-200" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="actions mt-6">
+              <button className="mgmt-btn secondary" onClick={() => { setShowDetail(false); setDetailCustomer(null); }}>Đóng</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Phân trang */}
       <div className="pagination">

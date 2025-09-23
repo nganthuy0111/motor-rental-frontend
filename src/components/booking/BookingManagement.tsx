@@ -6,11 +6,25 @@ import { getVehicles } from "../../service/vehicleService";
 import type { Customer } from "../../types/customer";
 import type { Vehicle } from "../../types/vehicle";
 import "./BookingManagement.css";
+import "../../styles/management.css";
 
 const BookingManagement = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
+  const [detailBooking, setDetailBooking] = useState<Booking | null>(null);
+  const [search, setSearch] = useState("");
+
+  // Helper: format ISO date string to 'YYYY-MM-DDTHH:MM' in local time for <input type="datetime-local">
+  const toLocalInputValue = (dateStr?: string) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "";
+    const tzOffset = d.getTimezoneOffset();
+    const local = new Date(d.getTime() - tzOffset * 60000);
+    return local.toISOString().slice(0, 16);
+  };
 
   type FormState = CreateBookingPayload & {
     status?: Booking["status"]; // chỉ dùng khi edit
@@ -145,16 +159,40 @@ const BookingManagement = () => {
 
   if (loading) return <p className="loading">Đang tải dữ liệu...</p>;
 
+  // Lọc theo từ khóa giống trang Vehicle (tìm theo KH, SĐT, biển số, hãng xe)
+  const filtered = bookings.filter((b) => {
+    const customerName = (b as any).customer?.name?.toLowerCase?.() || "";
+    const customerPhone = (b as any).customer?.phone?.toLowerCase?.() || "";
+    const vehiclePlate = (b as any).vehicle?.licensePlate?.toLowerCase?.() || "";
+    const vehicleBrand = (b as any).vehicle?.brand?.toLowerCase?.() || "";
+    const term = search.toLowerCase();
+    return (
+      customerName.includes(term) ||
+      customerPhone.includes(term) ||
+      vehiclePlate.includes(term) ||
+      vehicleBrand.includes(term)
+    );
+  });
+
   return (
-    <div className="booking-container">
-      <h1 className="booking-title">Quản lý đơn thuê</h1>
+    <div className="mgmt-page">
+      <h1 className="mgmt-title">Quản lý đơn thuê</h1>
+      <div className="bg-gray-100 rounded-lg p-4 mb-6 border border-gray-200 flex flex-col md:flex-row md:items-center md:justify-between">
+        <input
+          className="bg-white text-gray-900 border border-gray-300 rounded px-4 py-2 w-full md:w-1/2 mb-2 md:mb-0"
+          placeholder="Tìm kiếm theo KH, SĐT, biển số, hãng xe..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <div className="flex gap-3 ml-0 md:ml-4">
+          <button className="mgmt-btn primary ml-0 md:ml-0 mt-2 md:mt-0" onClick={() => setShowForm(true)}>
+            + Thêm đơn thuê
+          </button>
+        </div>
+      </div>
 
-      <button className="add-btn" onClick={() => setShowForm(true)}>
-        + Thêm đơn thuê
-      </button>
-
-      <div className="booking-table-wrapper">
-        <table className="booking-table">
+      <div className="mgmt-table-wrapper">
+        <table className="mgmt-table">
           <thead>
             <tr>
               <th>Khách hàng</th>
@@ -167,7 +205,7 @@ const BookingManagement = () => {
             </tr>
           </thead>
           <tbody>
-            {bookings.map((b) => (
+            {filtered.map((b) => (
               <tr key={b._id}>
                 <td>
                   {(
@@ -175,7 +213,7 @@ const BookingManagement = () => {
                     typeof (b as any).customer === "object" &&
                     ((b as any).customer.name || (b as any).customer.phone)
                   )
-                    ? `${(b as any).customer.name ?? ""}${(b as any).customer.phone ? ` (${(b as any).customer.phone})` : ""}`
+                    ? `${(b as any).customer.name ?? ""}${(b as any).customer.phone ? `(${(b as any).customer.phone})` : ""}`
                     : "—"}
                 </td>
                 <td>
@@ -191,17 +229,47 @@ const BookingManagement = () => {
                   {new Date(b.startDate).toLocaleDateString()} →{" "}
                   {new Date(b.endDate).toLocaleDateString()}
                 </td>
-                <td className="price">
+                <td className="mgmt-price">
                   {b.totalPrice.toLocaleString("vi-VN")} VND
                 </td>
                 <td>
-                  <span className={`status-badge ${b.status}`}>{b.status}</span>
+                  <span className={`mgmt-badge ${b.status}`}>{b.status}</span>
                 </td>
                 <td>
-                  <div style={{ display: "flex", gap: 8 }}>
+                  <div className="mgmt-actions">
                     <button
                       type="button"
-                      className="edit-btn"
+                      className="mgmt-btn secondary icon"
+                      title="Xem chi tiết"
+                      onClick={() => {
+                        setDetailBooking(b);
+                        setShowDetail(true);
+                      }}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2}
+                        stroke="currentColor"
+                        className="w-5 h-5"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      className="mgmt-btn secondary icon"
+                      title="Sửa"
                       onClick={() => {
                         setEditingId(b._id);
                         setShowForm(true);
@@ -210,8 +278,8 @@ const BookingManagement = () => {
                         setFormData({
                           customer: b.customer?._id || "",
                           vehicle: b.vehicle?._id || "",
-                          startDate: b.startDate?.slice(0, 10) || "",
-                          endDate: b.endDate?.slice(0, 10) || "",
+                          startDate: toLocalInputValue(b.startDate),
+                          endDate: toLocalInputValue(b.endDate),
                           totalPrice: b.totalPrice || 0,
                           status: b.status,
                         });
@@ -223,11 +291,14 @@ const BookingManagement = () => {
                         );
                       }}
                     >
-                      Sửa
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.95 1.95m-2.475-1.425l-9.193 9.193a4.5 4.5 0 00-1.17 2.137l-.313 1.25a.75.75 0 00.91.91l1.25-.313a4.5 4.5 0 002.137-1.17l9.193-9.193m-2.814-2.814a1.5 1.5 0 112.122 2.122L12.38 14.13a3 3 0 01-1.424.802l-1.068.267.267-1.068a3 3 0 01.802-1.424l6.905-6.905z" />
+                      </svg>
                     </button>
                     <button
                       type="button"
-                      className="delete-btn"
+                      className="mgmt-btn destructive icon"
+                      title="Xóa"
                       onClick={async () => {
                         if (!confirm("Bạn có chắc muốn xóa đơn thuê này?")) return;
                         try {
@@ -239,7 +310,25 @@ const BookingManagement = () => {
                         }
                       }}
                     >
-                      Xóa
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2}
+                        stroke="currentColor"
+                        className="w-5 h-5"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M6 7h12M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2m3 0v12a2 2 0 01-2 2H7a2 2 0 01-2-2V7h16z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M10 11v6m4-6v6"
+                        />
+                      </svg>
                     </button>
                   </div>
                 </td>
@@ -394,7 +483,7 @@ const BookingManagement = () => {
                 </label>
                 <input
                   id="startDate"
-                  type="date"
+                  type="datetime-local"
                   name="startDate"
                   value={formData.startDate}
                   onChange={handleChange}
@@ -409,7 +498,7 @@ const BookingManagement = () => {
                 </label>
                 <input
                   id="endDate"
-                  type="date"
+                  type="datetime-local"
                   name="endDate"
                   value={formData.endDate}
                   onChange={handleChange}
@@ -459,18 +548,43 @@ const BookingManagement = () => {
               )}
 
               <div className="form-actions">
-                <button type="submit" className="save-btn">
+                <button type="submit" className="mgmt-btn primary">
                   Lưu
                 </button>
                 <button
                   type="button"
-                  className="cancel-btn"
+                  className="mgmt-btn secondary"
                   onClick={() => setShowForm(false)}
                 >
                   Hủy
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {showDetail && detailBooking && (
+        <div className="popup-overlay">
+          <div className="popup max-w-2xl">
+            <h2>Chi tiết đơn thuê</h2>
+            <button
+              className="absolute top-4 right-6 text-gray-400 hover:text-red-400 text-2xl"
+              onClick={() => { setShowDetail(false); setDetailBooking(null); }}
+            >
+              &times;
+            </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
+              <div>
+                <div className="mb-2"><span className="font-semibold">Khách hàng:</span> {((detailBooking as any).customer && typeof (detailBooking as any).customer === 'object') ? `${(detailBooking as any).customer.name}${(detailBooking as any).customer.phone ? ` (${(detailBooking as any).customer.phone})` : ''}` : '—'}</div>
+                <div className="mb-2"><span className="font-semibold">Xe:</span> {((detailBooking as any).vehicle && typeof (detailBooking as any).vehicle === 'object') ? `${(detailBooking as any).vehicle.licensePlate} - ${(detailBooking as any).vehicle.brand}` : '—'}</div>
+                <div className="mb-2"><span className="font-semibold">Thời gian:</span> {new Date(detailBooking.startDate).toLocaleDateString()} → {new Date(detailBooking.endDate).toLocaleDateString()}</div>
+                <div className="mb-2"><span className="font-semibold">Tổng tiền:</span> {detailBooking.totalPrice.toLocaleString('vi-VN')} VND</div>
+                <div className="mb-2"><span className="font-semibold">Trạng thái:</span> <span className={`mgmt-badge ${detailBooking.status}`}>{detailBooking.status}</span></div>
+              </div>
+            </div>
+            <div className="form-actions mt-6">
+              <button className="mgmt-btn secondary" onClick={() => { setShowDetail(false); setDetailBooking(null); }}>Đóng</button>
+            </div>
           </div>
         </div>
       )}

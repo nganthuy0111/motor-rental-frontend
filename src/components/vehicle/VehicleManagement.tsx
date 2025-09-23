@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import axios from '../../api/axios';
 import { toast } from 'react-toastify';
 import type { Vehicle } from '../../types/vehicle';
+import "../../styles/management.css";
 
 
 const statusMap: Record<string, { label: string; color: string }> = {
@@ -17,9 +18,11 @@ const VehicleManagement: React.FC = () => {
   const [editForm, setEditForm] = useState<any>(null);
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
-const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
+  const [detailVehicle, setDetailVehicle] = useState<Vehicle | null>(null);
 
-const handleDeleteVehicle = async (vehicleId: string) => {
+  const handleDeleteVehicle = async (vehicleId: string) => {
     if (window.confirm('Bạn có chắc muốn xóa xe này?')) {
       setDeleteLoading(true);
       try {
@@ -149,8 +152,8 @@ const handleDeleteVehicle = async (vehicleId: string) => {
   };
 
   return (
-  <div className="bg-white min-h-screen p-6 text-gray-900">
-      <h1 className="text-3xl font-bold mb-6">Quản lý xe</h1>
+  <div className="mgmt-page">
+      <h1 className="mgmt-title">Quản lý xe</h1>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-gray-100 rounded-lg p-4 flex items-center justify-between border border-gray-200">
           <div>
@@ -193,7 +196,7 @@ const handleDeleteVehicle = async (vehicleId: string) => {
         <select className="bg-white text-gray-900 border border-gray-300 rounded px-4 py-2 ml-0 md:ml-4">
           <option>Tất cả trạng thái</option>
         </select>
-  <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded ml-0 md:ml-4 mt-2 md:mt-0" onClick={() => setShowAdd(true)}>+ Thêm xe mới</button>
+  <button className="mgmt-btn primary ml-0 md:ml-4 mt-2 md:mt-0" onClick={() => setShowAdd(true)}>+ Thêm xe mới</button>
       {/* Modal thêm xe mới dạng popup nổi */}
       {showAdd && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -277,19 +280,19 @@ const handleDeleteVehicle = async (vehicleId: string) => {
       </div>
 
       {/* Danh sách xe */}
-      <div className="bg-gray-100 rounded-lg p-4 border border-gray-200">
+      <div className="mgmt-table-wrapper">
         <div className="mb-2 font-semibold">Danh sách xe ({filtered.length} xe)</div>
         <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
+          <table className="mgmt-table">
             <thead>
               <tr className="border-b border-gray-300">
-                <th className="p-2 text-left">Hình ảnh</th>
-                <th className="p-2 text-left">Biển số</th>
-                <th className="p-2 text-left">Xe</th>
-                <th className='p-2 text-left'>Loại xe</th>
-                <th className="p-2 text-left">Trạng thái</th>
-                <th className="p-2 text-left">Giá/ngày</th>
-                <th className="p-2 text-left">Thao tác</th>
+                <th className="text-left">Hình ảnh</th>
+                <th className="text-left">Biển số</th>
+                <th className="text-left">Xe</th>
+                <th className='text-left'>Loại xe</th>
+                <th className="text-left">Trạng thái</th>
+                <th className="text-left">Giá/ngày</th>
+                <th className="text-left">Thao tác</th>
               </tr>
             </thead>
             <tbody>
@@ -311,12 +314,40 @@ const handleDeleteVehicle = async (vehicleId: string) => {
                     <td className="p-2">{v.brand}</td>
                     <td className="p-2">{v.type}</td>
                     <td className="p-2">
-                      <span className={`px-3 py-1 rounded text-white text-xs font-semibold ${statusMap[v.status]?.color}`}>{statusMap[v.status]?.label}</span>
+                      <span className={`mgmt-badge ${v.status === 'available' ? 'completed' : v.status === 'rented' ? 'overdue' : 'active'}`}>{statusMap[v.status]?.label}</span>
                     </td>
                     <td className="p-2">{v.pricePerDay?.toLocaleString('vi-VN')} VND</td>
                     <td className="p-2 flex gap-2">
                       <button
-                        className="bg-gray-200 hover:bg-gray-300 p-2 rounded"
+                        className="mgmt-btn secondary"
+                        title="Xem chi tiết"
+                        onClick={() => {
+                          setDetailVehicle(v);
+                          setShowDetail(true);
+                        }}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth={2}
+                          stroke="currentColor"
+                          className="w-5 h-5"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        </svg>
+                      </button>
+                      <button
+                        className="mgmt-btn secondary"
                         title="Sửa"
                         onClick={() => {
                           setEditForm({
@@ -424,8 +455,56 @@ const handleDeleteVehicle = async (vehicleId: string) => {
           </div>
         </div>
       )}
+      {showDetail && detailVehicle && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0" style={{ background: '#666666', opacity: 0.2 }}></div>
+          <div className="relative bg-white text-gray-900 rounded-lg p-8 w-full max-w-2xl shadow-lg border border-gray-200 z-10 animate-fade-in">
+            <button
+              className="absolute top-4 right-6 text-gray-400 hover:text-red-400 text-2xl"
+              onClick={() => { setShowDetail(false); setDetailVehicle(null); }}
+            >
+              &times;
+            </button>
+            <h2 className="text-2xl font-bold mb-4">Chi tiết xe</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <div className="mb-2"><span className="font-semibold">Biển số:</span> {detailVehicle.licensePlate}</div>
+                <div className="mb-2"><span className="font-semibold">Hãng xe:</span> {detailVehicle.brand}</div>
+                <div className="mb-2"><span className="font-semibold">Loại xe:</span> {detailVehicle.type}</div>
+                <div className="mb-2">
+                  <span className="font-semibold">Trạng thái:</span>{' '}
+                  <span className={`mgmt-badge ${detailVehicle.status === 'available' ? 'completed' : detailVehicle.status === 'rented' ? 'overdue' : 'active'}`}>
+                    {statusMap[detailVehicle.status]?.label}
+                  </span>
+                </div>
+                <div className="mb-2"><span className="font-semibold">Giá/ngày:</span> {detailVehicle.pricePerDay?.toLocaleString('vi-VN')} VND</div>
+              </div>
+              <div>
+                <div className="font-semibold mb-2">Hình ảnh</div>
+                {detailVehicle.images && detailVehicle.images.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {detailVehicle.images.map((url: string, idx: number) => (
+                      <img key={idx} src={url} alt={`vehicle-${idx}`} className="w-24 h-16 object-cover rounded border border-gray-200" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="w-full h-16 bg-gray-100 border border-gray-200 rounded flex items-center justify-center text-sm text-gray-500">Không có ảnh</div>
+                )}
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                className="px-6 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+                onClick={() => { setShowDetail(false); setDetailVehicle(null); }}
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
                       <button
-    className="bg-red-100 hover:bg-red-200 text-red-700 p-2 rounded"
+    className="mgmt-btn destructive"
     title="Xóa"
     onClick={() => handleDeleteVehicle(v._id)}
     disabled={deleteLoading}

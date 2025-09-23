@@ -1,0 +1,111 @@
+/* Shared management page styles: fonts, table, badges, buttons */
+
+.mgmt-page {
+  background: #fff;
+  min-height: 100vh;
+  padding: 24px;
+  color: #111827;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.mgmt-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.mgmt-table-wrapper {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  background: #f9fafb;
+  padding: 16px;
+}
+
+.mgmt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mgmt-table thead {
+  background: #f9fafb;
+}
+
+.mgmt-table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-weight: 600;
+  color: #111827;
+  vertical-align: middle;
+}
+
+.mgmt-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
+  vertical-align: middle;
+}
+
+.mgmt-table tr:hover td {
+  background: #fafafa;
+}
+
+/* Badges */
+.mgmt-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mgmt-badge.pending { background: #fff4e5; color: #ed6c02; }
+.mgmt-badge.active { background: #e6f4ff; color: #0958d9; }
+.mgmt-badge.completed { background: #e8f5e9; color: #2e7d32; }
+.mgmt-badge.overdue { background: #ffebee; color: #c62828; }
+.mgmt-badge.canceled { background: #f0f0f0; color: #555; }
+
+/* Generic buttons */
+.mgmt-btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mgmt-btn.primary { background: #e53935; color: #fff; }
+.mgmt-btn.primary:hover { background: #c62828; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(229,57,53,0.3); }
+
+.mgmt-btn.secondary { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+.mgmt-btn.secondary:hover { background: #e5e7eb; border-color: #9ca3af; }
+
+.mgmt-btn.destructive { background: #fee2e2; color: #b91c1c; }
+.mgmt-btn.destructive:hover { background: #fecaca; }
+
+/* Price helper */
+.mgmt-price { color: #d32f2f; font-weight: 600; }
+
+/* Actions row: align and space icon buttons */
+.mgmt-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Icon-sized buttons (square, centered) */
+.mgmt-btn.icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  justify-content: center;
+}

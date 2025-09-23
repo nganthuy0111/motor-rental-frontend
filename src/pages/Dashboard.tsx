@@ -5,18 +5,7 @@ import ContentDashboard from '../components/dashboard/content-dashboard/ContentD
 import VehicleManagement from '../components/vehicle/VehicleManagement';
 import CustomerManagement from '../components/customers/CustomerManagement';
 import BookingManagement from '../components/booking/BookingManagement';
-
-// const tabList = [
-//   'Dashboard',
-//   'Quản lý xe',
-//   'Khách hàng',
-//   'Đơn thuê',
-//   'Lịch trình',
-//   'Báo cáo',
-//   'Thông kê',
-//   'Log hoạt động',
-//   'Cài đặt',
-// ];
+import Schedule from '../components/schedule/Schedule';
 
 const Dashboard: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState('Dashboard');
@@ -36,7 +25,7 @@ const Dashboard: React.FC = () => {
       content = <BookingManagement/>;
       break;
     case 'Lịch trình':
-      content = <div>Lịch trình (đang phát triển)</div>;
+      content = <Schedule/>;
       break;
     case 'Báo cáo':
       content = <div>Báo cáo (đang phát triển)</div>;
