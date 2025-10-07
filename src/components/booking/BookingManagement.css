@@ -304,3 +304,23 @@
   background: #e5e7eb;
   border-color: #9ca3af;
 }
+.edit-btn {
+  background: #2563eb;
+  color: #fff;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+.edit-btn:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(29, 78, 216, 0.25);
+}
+.dropdown.disabled .dropdown-toggle {
+  background: #f5f6f8;
+  cursor: not-allowed;
+}

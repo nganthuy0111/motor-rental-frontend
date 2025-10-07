@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Booking } from "../../types/booking";
 import {
   getBookings,
   createBooking,
   updateBooking,
   deleteBooking,
-  type CreateBookingPayload,
   type UpdateBookingPayload,
 } from "../../service/bookingService";
 import { getCustomers } from "../../service/customerService";
@@ -33,13 +32,19 @@ const BookingManagement = () => {
     return local.toISOString().slice(0, 16);
   };
 
-  type FormState = CreateBookingPayload & {
+  // Define explicit form state to avoid optional vehicles and ensure strong typing
+  type FormState = {
+    customer: string;
+    vehicles: string[];
+    startDate: string;
+    endDate: string;
+    totalPrice: number;
     status?: Booking["status"]; // chỉ dùng khi edit
   };
 
   const [formData, setFormData] = useState<FormState>({
     customer: "",
-    vehicle: "",
+    vehicles: [],
     startDate: "",
     endDate: "",
     totalPrice: 0,
@@ -54,10 +59,13 @@ const BookingManagement = () => {
   const [vehicleSearch, setVehicleSearch] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [vehicleMap, setVehicleMap] = useState<Record<string, Vehicle>>({});
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
   const [customerLabel, setCustomerLabel] = useState("");
   const [vehicleLabel, setVehicleLabel] = useState("");
+  const [showVehiclesList, setShowVehiclesList] = useState(false);
+  const [vehiclesListData, setVehiclesListData] = useState<Array<any>>([]);
 
   useEffect(() => {
     getBookings()
@@ -124,6 +132,69 @@ const BookingManagement = () => {
     };
   }, [vehicleOpen, vehicleSearch]);
 
+  // Select-all checkbox state for vehicle list
+  const selectableIds = vehicles.map(v => v._id);
+  const allSelected = selectableIds.length > 0 && selectableIds.every(id => formData.vehicles.includes(id));
+  const someSelected = selectableIds.some(id => formData.vehicles.includes(id)) && !allSelected;
+  const selectAllRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = someSelected;
+    }
+  }, [someSelected, allSelected]);
+
+  // Load all vehicles once for price lookup and label building (enrichment)
+  useEffect(() => {
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const res = await getVehicles({ page: 1, limit: 1000, search: "" }, controller.signal);
+        const list = (res as any)?.data ?? res;
+        const arr: Vehicle[] = Array.isArray(list) ? list : list?.data ?? [];
+        setVehicleMap(arr.reduce((acc, v) => { acc[v._id] = v; return acc; }, {} as Record<string, Vehicle>));
+      } catch {}
+    })();
+    return () => controller.abort();
+  }, []);
+
+  // Auto-calc total price = days * sum(pricePerDay of selected vehicles)
+  useEffect(() => {
+    const { startDate, endDate, vehicles: selected } = formData;
+    if (!startDate || !endDate) return;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const ms = end.getTime() - start.getTime();
+    if (isNaN(ms) || ms <= 0) return;
+    const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
+    const sum = selected.reduce((acc, id) => {
+      const v = vehicleMap[id] || vehicles.find(x => x._id === id);
+      return acc + (v?.pricePerDay || 0);
+    }, 0);
+    setFormData(prev => ({ ...prev, totalPrice: Math.max(0, days) * sum }));
+  }, [formData.startDate, formData.endDate, formData.vehicles, vehicleMap]);
+
+  // Inline validation: end must be after start
+  const invalidRange = (() => {
+    if (!formData.startDate || !formData.endDate) return false;
+    const s = new Date(formData.startDate);
+    const e = new Date(formData.endDate);
+    return isNaN(s.getTime()) || isNaN(e.getTime()) || e <= s;
+  })();
+
+  // Quick selectors for date-time inputs
+  const setStartNow = () => {
+    const now = new Date();
+    // round to nearest 15 minutes
+    const ms = 15 * 60 * 1000;
+    const rounded = new Date(Math.ceil(now.getTime() / ms) * ms);
+    setFormData(prev => ({ ...prev, startDate: toLocalInputValue(rounded.toISOString()) }));
+  };
+  const setEndPlusDays = (d: number) => {
+    const base = formData.startDate ? new Date(formData.startDate) : new Date();
+    const end = new Date(base.getTime() + d * 24 * 60 * 60 * 1000);
+    setFormData(prev => ({ ...prev, endDate: toLocalInputValue(end.toISOString()) }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -133,6 +204,7 @@ const BookingManagement = () => {
           endDate: formData.endDate,
           totalPrice: Number(formData.totalPrice) || 0,
           status: formData.status ?? "pending",
+          vehicles: formData.vehicles,
         };
         await updateBooking(editingId, payload);
         // Re-fetch to ensure customer/vehicle are populated and the UI updates immediately
@@ -141,7 +213,7 @@ const BookingManagement = () => {
       } else {
         await createBooking({
           customer: formData.customer,
-          vehicle: formData.vehicle,
+          vehicles: formData.vehicles,
           startDate: formData.startDate,
           endDate: formData.endDate,
           totalPrice: Number(formData.totalPrice) || 0,
@@ -160,7 +232,7 @@ const BookingManagement = () => {
       setVehicleSearch("");
       setFormData({
         customer: "",
-        vehicle: "",
+        vehicles: [],
         startDate: "",
         endDate: "",
         totalPrice: 0,
@@ -235,13 +307,32 @@ const BookingManagement = () => {
                     : "—"}
                 </td>
                 <td>
-                  {(b as any).vehicle &&
-                  typeof (b as any).vehicle === "object" &&
-                  ((b as any).vehicle.licensePlate || (b as any).vehicle.brand)
-                    ? `${(b as any).vehicle.licensePlate ?? ""} - ${
-                        (b as any).vehicle.brand ?? ""
-                      }`
-                    : "—"}
+                  {Array.isArray((b as any).vehicles) && (b as any).vehicles.length > 0 ? (
+                    <button
+                      type="button"
+                      className="mgmt-btn secondary"
+                      onClick={() => {
+                        setVehiclesListData((b as any).vehicles);
+                        setShowVehiclesList(true);
+                      }}
+                      title="Xem danh sách xe"
+                    >
+                      {(b as any).vehicles.length} xe
+                    </button>
+                  ) : (b as any).vehicle && typeof (b as any).vehicle === "object" ? (
+                    <button
+                      type="button"
+                      className="mgmt-btn secondary"
+                      onClick={() => {
+                        setVehiclesListData([(b as any).vehicle]);
+                        setShowVehiclesList(true);
+                      }}
+                    >
+                      1 xe
+                    </button>
+                  ) : (
+                    "—"
+                  )}
                 </td>
                 <td>
                   {new Date(b.startDate).toLocaleDateString()} →{" "}
@@ -294,25 +385,30 @@ const BookingManagement = () => {
                         setCustomerOpen(false);
                         setVehicleOpen(false);
                         setFormData({
-                          customer: b.customer?._id || "",
-                          vehicle: b.vehicle?._id || "",
+                          customer: (b as any).customer?._id || (typeof (b as any).customer === "string" ? (b as any).customer : ""),
+                          vehicles: Array.isArray((b as any).vehicles)
+                            ? (b as any).vehicles.map((v: any) => (typeof v === "string" ? v : v._id)).filter(Boolean)
+                            : ((b as any).vehicle?._id ? [(b as any).vehicle._id] : []),
                           startDate: toLocalInputValue(b.startDate),
                           endDate: toLocalInputValue(b.endDate),
                           totalPrice: b.totalPrice || 0,
                           status: b.status,
                         });
-                        setCustomerLabel(
-                          b.customer
-                            ? `${b.customer.name}${
-                                b.customer.phone ? ` (${b.customer.phone})` : ""
-                              }`
-                            : ""
-                        );
-                        setVehicleLabel(
-                          b.vehicle
-                            ? `${b.vehicle.licensePlate} - ${b.vehicle.brand}`
-                            : ""
-                        );
+                        const cust = (b as any).customer;
+                        const custLabel = cust
+                          ? (typeof cust === "string"
+                              ? cust.slice(-6)
+                              : `${cust.name ?? ""}${cust.phone ? ` (${cust.phone})` : ""}`)
+                          : "";
+                        setCustomerLabel(custLabel);
+                        const vehicleLabelList = Array.isArray((b as any).vehicles)
+                          ? (b as any).vehicles
+                              .map((v: any) => (typeof v === "string" ? v.slice(-6) : `${v.licensePlate} - ${v.brand}`))
+                              .join(", ")
+                          : (b as any).vehicle
+                          ? `${(b as any).vehicle.licensePlate} - ${(b as any).vehicle.brand}`
+                          : "";
+                        setVehicleLabel(vehicleLabelList);
                       }}
                     >
                       <svg
@@ -463,29 +559,76 @@ const BookingManagement = () => {
               </div>
 
               <div className="form-group dropdown-group">
-                <label htmlFor="vehicle" className="form-label">
-                  Chọn xe <span className="required">*</span>
+                <label htmlFor="vehicles" className="form-label">
+                  Chọn xe (nhiều) <span className="required">*</span>
                 </label>
-                <div
-                  className={`dropdown ${editingId ? "disabled" : ""}`}
-                  onClick={() => !editingId && setVehicleOpen(true)}
-                >
-                  <input
-                    id="vehicle"
-                    type="text"
-                    name="vehicleLabel"
-                    placeholder="Tìm và chọn xe"
-                    value={vehicleOpen ? vehicleSearch : vehicleLabel || ""}
-                    onChange={(e) =>
-                      !editingId && setVehicleSearch(e.target.value)
-                    }
-                    className="form-input dropdown-toggle"
-                    onFocus={() => !editingId && setVehicleOpen(true)}
-                    autoComplete="off"
-                    disabled={!!editingId}
-                  />
+                <div className="dropdown">
+                  <div
+                    className="form-input dropdown-toggle flex items-center flex-wrap gap-1 min-h-[40px] cursor-pointer"
+                    onClick={() => setVehicleOpen(true)}
+                  >
+                    {formData.vehicles.length === 0 ? (
+                      <span className="text-gray-400">Chọn 1 hoặc nhiều xe...</span>
+                    ) : (
+                      (() => {
+                        const chips = formData.vehicles.slice(0, 2).map((id) => {
+                          const v = vehicleMap[id] || vehicles.find(x => x._id === id);
+                          const label = v ? `${v.licensePlate} - ${v.brand}` : id.slice(-6);
+                          return (
+                            <span key={id} className="px-2 py-1 bg-gray-200 text-gray-800 rounded-full text-xs flex items-center gap-1">
+                              {label}
+                              <button
+                                type="button"
+                                className="text-gray-500 hover:text-red-500"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setFormData(prev => ({ ...prev, vehicles: prev.vehicles.filter(vId => vId !== id) }));
+                                }}
+                                aria-label="Remove"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          );
+                        });
+                        const more = formData.vehicles.length - 2;
+                        return (
+                          <>
+                            {chips}
+                            {more > 0 && (
+                              <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">+{more} nữa</span>
+                            )}
+                          </>
+                        );
+                      })()
+                    )}
+                    <span className="ml-auto text-gray-500">▾</span>
+                  </div>
                   {vehicleOpen && (
                     <div className="dropdown-menu">
+                      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 text-sm bg-gray-50">
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            ref={selectAllRef}
+                            checked={allSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setFormData(prev => ({ ...prev, vehicles: Array.from(new Set([...prev.vehicles, ...selectableIds])) }));
+                              } else {
+                                const currentSet = new Set(selectableIds);
+                                setFormData(prev => ({ ...prev, vehicles: prev.vehicles.filter(id => !currentSet.has(id)) }));
+                              }
+                            }}
+                          />
+                          <span>Chọn tất cả</span>
+                        </label>
+                        <button
+                          type="button"
+                          className="text-gray-500 hover:text-gray-700"
+                          onClick={() => setFormData(prev => ({ ...prev, vehicles: [] }))}
+                        >Bỏ chọn</button>
+                      </div>
                       <input
                         type="text"
                         className="dropdown-search"
@@ -494,37 +637,48 @@ const BookingManagement = () => {
                         onChange={(e) => setVehicleSearch(e.target.value)}
                         autoFocus
                       />
-                      <div className="dropdown-list">
+                      <div className="dropdown-list max-h-64 overflow-y-auto divide-y divide-gray-100">
                         {loadingVehicles ? (
                           <div className="dropdown-empty">Đang tải...</div>
                         ) : vehicles.length === 0 ? (
                           <div className="dropdown-empty">Không có kết quả</div>
                         ) : (
-                          vehicles.map((v) => (
-                            <div
-                              key={v._id}
-                              className="dropdown-item"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  vehicle: v._id,
-                                }));
-                                setVehicleLabel(
-                                  `${v.licensePlate} - ${v.brand}`
-                                );
-                                setVehicleOpen(false);
-                              }}
-                            >
-                              <div className="item-title">
-                                {v.licensePlate} - {v.brand}
+                          vehicles.map((v) => {
+                            const selected = formData.vehicles.includes(v._id);
+                            return (
+                              <div
+                                key={v._id}
+                                className={`dropdown-item px-3 py-2 hover:bg-gray-50 flex items-start gap-2 cursor-pointer`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setFormData((prev) => {
+                                    const set = new Set(prev.vehicles);
+                                    if (set.has(v._id)) set.delete(v._id); else set.add(v._id);
+                                    return { ...prev, vehicles: Array.from(set) };
+                                  });
+                                  setVehicleLabel("");
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selected}
+                                  onChange={(e) => {
+                                    e.stopPropagation();
+                                    setFormData((prev) => {
+                                      const set = new Set(prev.vehicles);
+                                      if (e.target.checked) set.add(v._id); else set.delete(v._id);
+                                      return { ...prev, vehicles: Array.from(set) };
+                                    });
+                                  }}
+                                  className="mt-0.5"
+                                />
+                                <div className="flex-1">
+                                  <div className="item-title">{v.licensePlate} - {v.brand}</div>
+                                  <div className="item-sub">{v.type} • {v.color} • {v.pricePerDay.toLocaleString("vi-VN")}đ/ngày</div>
+                                </div>
                               </div>
-                              <div className="item-sub">
-                                {v.type} • {v.color} •{" "}
-                                {v.pricePerDay.toLocaleString("vi-VN")}đ/ngày
-                              </div>
-                            </div>
-                          ))
+                            );
+                          })
                         )}
                       </div>
                       <button
@@ -540,8 +694,8 @@ const BookingManagement = () => {
                     </div>
                   )}
                 </div>
-                {/* Hidden field holds the selected vehicle ID for submit */}
-                <input type="hidden" name="vehicle" value={formData.vehicle} />
+                {/* Hidden field holds the selected vehicles for submit */}
+                <input type="hidden" name="vehicles" value={formData.vehicles.join(",")} />
               </div>
 
               <div className="form-group">
@@ -555,8 +709,13 @@ const BookingManagement = () => {
                   value={formData.startDate}
                   onChange={handleChange}
                   className="form-input"
+                  step={900}
+                  min={toLocalInputValue(new Date().toISOString())}
                   required
                 />
+                <div className="mt-2 flex gap-2 text-xs">
+                  <button type="button" className="mgmt-btn secondary" onClick={setStartNow}>Bây giờ</button>
+                </div>
               </div>
 
               <div className="form-group">
@@ -570,8 +729,18 @@ const BookingManagement = () => {
                   value={formData.endDate}
                   onChange={handleChange}
                   className="form-input"
+                  step={900}
+                  min={formData.startDate || undefined}
                   required
                 />
+                <div className="mt-2 flex gap-2 text-xs">
+                  <button type="button" className="mgmt-btn secondary" onClick={() => setEndPlusDays(1)}>+1 ngày</button>
+                  <button type="button" className="mgmt-btn secondary" onClick={() => setEndPlusDays(2)}>+2 ngày</button>
+                  <button type="button" className="mgmt-btn secondary" onClick={() => setEndPlusDays(7)}>+7 ngày</button>
+                </div>
+                {invalidRange && (
+                  <div className="text-red-500 text-xs mt-1">Ngày kết thúc phải sau ngày bắt đầu.</div>
+                )}
               </div>
 
               <div className="form-group">
@@ -618,7 +787,7 @@ const BookingManagement = () => {
               )}
 
               <div className="form-actions">
-                <button type="submit" className="mgmt-btn primary">
+                <button type="submit" className="mgmt-btn primary" disabled={invalidRange}>
                   Lưu
                 </button>
                 <button
@@ -691,6 +860,62 @@ const BookingManagement = () => {
                 onClick={() => {
                   setShowDetail(false);
                   setDetailBooking(null);
+                }}
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showVehiclesList && (
+        <div className="popup-overlay">
+          <div className="popup max-w-xl relative">
+            <h2>Danh sách xe trong đơn</h2>
+            <button
+              className="absolute top-4 right-6 text-gray-400 hover:text-red-400 text-2xl"
+              onClick={() => {
+                setShowVehiclesList(false);
+                setVehiclesListData([]);
+              }}
+            >
+              &times;
+            </button>
+            <div className="mt-4">
+              {(!vehiclesListData || vehiclesListData.length === 0) ? (
+                <div className="text-gray-500">Không có xe</div>
+              ) : (
+                <div className="divide-y divide-gray-200">
+                  {vehiclesListData.map((raw: any, idx: number) => {
+                    const id = typeof raw === "string" ? raw : raw?._id;
+                    const v = (id && vehicleMap[id]) || (typeof raw === "object" ? raw : null);
+                    const title = v ? `${v.licensePlate ?? id?.slice?.(-6)} - ${v.brand ?? ""}` : `Xe ${id?.slice?.(-6) ?? idx + 1}`;
+                    return (
+                      <div key={`${id}-${idx}`} className="py-3 flex items-center gap-3">
+                        {v?.images?.[0] ? (
+                          <img src={v.images[0]} alt="xe" className="w-14 h-10 object-cover rounded border border-gray-200" />
+                        ) : (
+                          <div className="w-14 h-10 bg-gray-100 flex items-center justify-center rounded text-xs text-gray-500 border border-gray-200">No image</div>
+                        )}
+                        <div className="flex-1">
+                          <div className="font-semibold leading-5">{title}</div>
+                          <div className="text-sm text-gray-600 leading-4">
+                            {(v?.type ?? "")}{v?.color ? ` • ${v.color}` : ""}
+                            {v?.pricePerDay ? ` • ${v.pricePerDay.toLocaleString("vi-VN")}đ/ngày` : ""}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="form-actions mt-6">
+              <button
+                className="mgmt-btn secondary"
+                onClick={() => {
+                  setShowVehiclesList(false);
+                  setVehiclesListData([]);
                 }}
               >
                 Đóng
