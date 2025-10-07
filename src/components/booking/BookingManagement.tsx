@@ -63,7 +63,6 @@ const BookingManagement = () => {
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
   const [customerLabel, setCustomerLabel] = useState("");
-  const [vehicleLabel, setVehicleLabel] = useState("");
   const [showVehiclesList, setShowVehiclesList] = useState(false);
   const [vehiclesListData, setVehiclesListData] = useState<Array<any>>([]);
 
@@ -227,7 +226,6 @@ const BookingManagement = () => {
       setShowForm(false);
       setEditingId(null);
       setCustomerLabel("");
-      setVehicleLabel("");
       setCustomerSearch("");
       setVehicleSearch("");
       setFormData({
@@ -401,14 +399,6 @@ const BookingManagement = () => {
                               : `${cust.name ?? ""}${cust.phone ? ` (${cust.phone})` : ""}`)
                           : "";
                         setCustomerLabel(custLabel);
-                        const vehicleLabelList = Array.isArray((b as any).vehicles)
-                          ? (b as any).vehicles
-                              .map((v: any) => (typeof v === "string" ? v.slice(-6) : `${v.licensePlate} - ${v.brand}`))
-                              .join(", ")
-                          : (b as any).vehicle
-                          ? `${(b as any).vehicle.licensePlate} - ${(b as any).vehicle.brand}`
-                          : "";
-                        setVehicleLabel(vehicleLabelList);
                       }}
                     >
                       <svg
@@ -656,7 +646,6 @@ const BookingManagement = () => {
                                     if (set.has(v._id)) set.delete(v._id); else set.add(v._id);
                                     return { ...prev, vehicles: Array.from(set) };
                                   });
-                                  setVehicleLabel("");
                                 }}
                               >
                                 <input
