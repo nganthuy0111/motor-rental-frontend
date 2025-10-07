@@ -6,6 +6,7 @@ import VehicleManagement from '../components/vehicle/VehicleManagement';
 import CustomerManagement from '../components/customers/CustomerManagement';
 import BookingManagement from '../components/booking/BookingManagement';
 import Schedule from '../components/schedule/Schedule';
+import ActivityLog from '../components/activity/ActivityLog';
 
 const Dashboard: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState('Dashboard');
@@ -34,7 +35,7 @@ const Dashboard: React.FC = () => {
       content = <div>Thông kê (đang phát triển)</div>;
       break;
     case 'Log hoạt động':
-      content = <div>Log hoạt động (đang phát triển)</div>;
+      content = <ActivityLog/>;
       break;
     case 'Cài đặt':
       content = <div>Cài đặt (đang phát triển)</div>;
