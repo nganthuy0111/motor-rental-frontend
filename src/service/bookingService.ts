@@ -18,6 +18,7 @@ export type CreateBookingPayload = {
   startDate: string;
   endDate: string;
   totalPrice: number;
+  color?: string; // optional color to display on schedule
 };
 
 export const createBooking = async (data: CreateBookingPayload): Promise<Booking> => {
@@ -30,6 +31,7 @@ export const createBooking = async (data: CreateBookingPayload): Promise<Booking
     endDate: data.endDate,
     totalPrice: data.totalPrice,
   };
+  if (data.color) payload.color = data.color;
   const res = await api.post("/bookings", payload);
   return res.data;
 };
@@ -44,6 +46,7 @@ export type UpdateBookingPayload = {
   vehicles?: string[];
   // legacy single vehicle for safety (will be normalized)
   vehicle?: string;
+  color?: string; // optional update color
 };
 
 // id là path param, payload là body
@@ -56,6 +59,9 @@ export const updateBooking = async (id: string, data: UpdateBookingPayload): Pro
   };
   if (data.vehicles || data.vehicle) {
     payload.vehicles = Array.isArray(data.vehicles) ? data.vehicles : (data.vehicle ? [data.vehicle] : undefined);
+  }
+  if (data.color) {
+    payload.color = data.color;
   }
   const res = await api.put(`/bookings/${id}`, payload);
   return res.data;

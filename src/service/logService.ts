@@ -25,7 +25,9 @@ export type GetLogsParams = {
   limit?: number;
 };
 
-export const LOGS_ENDPOINT = "/logs"; // change if your backend uses another path
+// Prefer env override, fallback to a sensible default.
+// Based on your backend stack trace (activityContext), the route is likely under /activity/logs
+export const LOGS_ENDPOINT = (import.meta as any).env?.VITE_LOGS_ENDPOINT ?? "/activity-logs";
 
 export async function getLogs(params: GetLogsParams = {}, signal?: AbortSignal): Promise<{ data: LogEntry[]; page?: number; limit?: number; total?: number } | LogEntry[]> {
   const { page = 1, limit = 20, ...rest } = params;

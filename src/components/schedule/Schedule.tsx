@@ -14,6 +14,7 @@ type FCEvent = {
   start: string; // ISO
   end: string;   // ISO
   resourceId: string; // vehicleId
+  color?: string; // optional color from booking
   extendedProps: {
     status?: Booking["status"];
     totalPrice?: number;
@@ -58,6 +59,7 @@ function Schedule() {
             start,
             end,
             resourceId: vid,
+            color: (b as any).color,
             extendedProps: { status: b.status, totalPrice: b.totalPrice, vehicleId: vid },
           }));
         });

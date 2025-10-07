@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { toast } from "react-toastify";
 import type { Booking } from "../../types/booking";
 import {
   getBookings,
@@ -40,6 +41,7 @@ const BookingManagement = () => {
     endDate: string;
     totalPrice: number;
     status?: Booking["status"]; // chỉ dùng khi edit
+    color?: string; // màu hiển thị trên timeline
   };
 
   const [formData, setFormData] = useState<FormState>({
@@ -48,6 +50,7 @@ const BookingManagement = () => {
     startDate: "",
     endDate: "",
     totalPrice: 0,
+    color: "#3b82f6",
   });
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -180,6 +183,14 @@ const BookingManagement = () => {
     return isNaN(s.getTime()) || isNaN(e.getTime()) || e <= s;
   })();
 
+  // Start time should not be in the past (soft validation to avoid native validity popups)
+  const startInPast = (() => {
+    if (!formData.startDate) return false;
+    const s = new Date(formData.startDate);
+    const now = new Date();
+    return !isNaN(s.getTime()) && s.getTime() < now.getTime();
+  })();
+
   // Quick selectors for date-time inputs
   const setStartNow = () => {
     const now = new Date();
@@ -204,6 +215,7 @@ const BookingManagement = () => {
           totalPrice: Number(formData.totalPrice) || 0,
           status: formData.status ?? "pending",
           vehicles: formData.vehicles,
+          color: formData.color,
         };
         await updateBooking(editingId, payload);
         // Re-fetch to ensure customer/vehicle are populated and the UI updates immediately
@@ -216,6 +228,7 @@ const BookingManagement = () => {
           startDate: formData.startDate,
           endDate: formData.endDate,
           totalPrice: Number(formData.totalPrice) || 0,
+          color: formData.color,
         });
         // Re-fetch to get populated customer/vehicle for the new booking as well
         const refreshed = await getBookings();
@@ -234,9 +247,28 @@ const BookingManagement = () => {
         startDate: "",
         endDate: "",
         totalPrice: 0,
+        color: "#3b82f6",
       });
     } catch (error) {
-      console.error("Lưu booking thất bại:", error);
+      // Thông báo lỗi thân thiện bằng tiếng Việt (toast nhỏ)
+      const anyErr: any = error as any;
+      const msg = anyErr?.response?.data?.message || anyErr?.response?.data?.error || anyErr?.message || "Lưu booking thất bại";
+      const details = anyErr?.response?.data?.details;
+      let extra = "";
+      if (details?.reason && details?.reason.toLowerCase().includes("overlap")) {
+        const vIds: string[] | undefined = Array.isArray(details.vehicles) ? details.vehicles : undefined;
+        const vLabels = vIds?.map((id: string) => {
+          const v = vehicleMap[id] || vehicles.find(x => x._id === id);
+          return v ? `${v.licensePlate}` : id;
+        }).join(", ");
+        const s = details.startDate || formData.startDate;
+        const e2 = details.endDate || formData.endDate;
+        const conflicts = Array.isArray(details.conflicts) && details.conflicts.length > 0 ? `\nMã đơn thuê trùng: ${details.conflicts.join(", ")}` : "";
+        extra = `\nXe trùng lịch: ${vLabels ?? "(không rõ)"}\nKhoảng thời gian: ${new Date(s).toLocaleString()} → ${new Date(e2).toLocaleString()}${conflicts}`;
+        toast.error(`Xe đã được đặt trong khoảng thời gian bạn chọn. Vui lòng chọn lại.\n${extra}`);
+        return;
+      }
+      toast.error(`Không thể lưu đơn thuê: ${msg}${extra ? `\n${extra}` : ""}`);
     }
   };
 
@@ -391,6 +423,7 @@ const BookingManagement = () => {
                           endDate: toLocalInputValue(b.endDate),
                           totalPrice: b.totalPrice || 0,
                           status: b.status,
+                          color: (b as any).color || "#3b82f6",
                         });
                         const cust = (b as any).customer;
                         const custLabel = cust
@@ -465,6 +498,7 @@ const BookingManagement = () => {
           <div className="popup">
             <h2>Thêm đơn thuê</h2>
             <form onSubmit={handleSubmit}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="form-group dropdown-group">
                 <label htmlFor="customer" className="form-label">
                   Chọn khách hàng <span className="required">*</span>
@@ -698,13 +732,15 @@ const BookingManagement = () => {
                   value={formData.startDate}
                   onChange={handleChange}
                   className="form-input"
-                  step={900}
-                  min={toLocalInputValue(new Date().toISOString())}
+                  step={60}
                   required
                 />
                 <div className="mt-2 flex gap-2 text-xs">
                   <button type="button" className="mgmt-btn secondary" onClick={setStartNow}>Bây giờ</button>
                 </div>
+                {startInPast && (
+                  <div className="text-orange-500 text-xs mt-1">Thời gian bắt đầu đang ở quá khứ.</div>
+                )}
               </div>
 
               <div className="form-group">
@@ -718,8 +754,7 @@ const BookingManagement = () => {
                   value={formData.endDate}
                   onChange={handleChange}
                   className="form-input"
-                  step={900}
-                  min={formData.startDate || undefined}
+                  step={60}
                   required
                 />
                 <div className="mt-2 flex gap-2 text-xs">
@@ -732,7 +767,7 @@ const BookingManagement = () => {
                 )}
               </div>
 
-              <div className="form-group">
+              <div className="form-group md:col-span-2">
                 <label htmlFor="totalPrice" className="form-label">
                   Tổng tiền (VND) <span className="required">*</span>
                 </label>
@@ -746,6 +781,20 @@ const BookingManagement = () => {
                   className="form-input"
                   min="0"
                   required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="color" className="form-label">
+                  Màu hiển thị trên lịch
+                </label>
+                <input
+                  id="color"
+                  type="color"
+                  name="color"
+                  value={formData.color || "#3b82f6"}
+                  onChange={handleChange}
+                  className="form-input"
                 />
               </div>
 
@@ -774,9 +823,8 @@ const BookingManagement = () => {
                   </select>
                 </div>
               )}
-
-              <div className="form-actions">
-                <button type="submit" className="mgmt-btn primary" disabled={invalidRange}>
+              <div className="form-actions md:col-span-2">
+                <button type="submit" className="mgmt-btn primary" disabled={invalidRange || startInPast}>
                   Lưu
                 </button>
                 <button
@@ -786,6 +834,7 @@ const BookingManagement = () => {
                 >
                   Hủy
                 </button>
+              </div>
               </div>
             </form>
           </div>

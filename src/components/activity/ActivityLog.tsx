@@ -30,8 +30,9 @@ const ActivityLog = () => {
         setTotal(undefined);
       } else {
         const anyRes = res as any;
-        setData(anyRes.data ?? []);
-        setTotal(anyRes.total ?? undefined);
+        const items = anyRes.items ?? anyRes.data ?? [];
+        setData(items as LogEntry[]);
+        setTotal(anyRes.total ?? anyRes.pagination?.total ?? (Array.isArray(items) ? items.length : undefined));
       }
       setParams((prev) => ({ ...prev, ...override }));
     } catch (e: any) {
